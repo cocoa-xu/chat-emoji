@@ -13,11 +13,10 @@ before_script:
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
-  - export DEBIAN_FRONTEND=noninteractive
-  - apt update && apt install -y --no-install-recommends pylint
 
 test:
   script:
     - pip3 install -r requirements.txt
+    - pip3 install pylint
     - pylint --disable=C0114,C0115,C0116 main.py
 
