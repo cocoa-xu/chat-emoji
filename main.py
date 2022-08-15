@@ -16,6 +16,8 @@ def parse_args():
     cwd = cwd.resolve()
     parser = argparse.ArgumentParser(description='YouTube Chat Emoji Cache Server.')
     parser.add_argument('--cache-dir', type=str, default=cwd, help='Cache directory')
+    parser.add_argument('--dump-from', type=str, default=None, help='Dump cached file')
+    parser.add_argument('--dump-to', type=str, default=None, help='Dump cached file to')
     parser.add_argument('--chat-host', type=str, default='https://yt3.ggpht.com',
                         help='Cache directory')
     parser.add_argument('--host', type=str, default='localhost', help='Server listen host')
@@ -38,6 +40,29 @@ def set_logging_level(log_level_str: str, logger_name: str):
         log_level = logging.FATAL
     logging.basicConfig(level=log_level, format='%(asctime)s [%(levelname)s] %(message)s')
     return logging.getLogger(logger_name)
+
+
+def dump_single(file_path, to_path):
+    output_file_name = f"{file_path.stem}.png"
+    if to_path.is_dir():
+        to_path = to_path / output_file_name
+    output_file = to_path.resolve()
+    with open(file_path.resolve(), 'r', encoding='utf-8') as cache_file_f:
+        cache_file = json.load(cache_file_f)
+        with open(output_file, "wb") as output_f:
+            output_f.write(base64.b64decode(cache_file['data']))
+
+
+def dump(from_path, to_path):
+    from_path = Path(from_path)
+    to_path = Path(to_path)
+    if from_path.is_dir():
+        files = from_path.glob('*.json')
+        to_path.mkdir(parents=True, exist_ok=True)
+        for file in files:
+            dump_single(file, to_path)
+    else:
+        dump_single(from_path, to_path)
 
 
 class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
@@ -132,6 +157,8 @@ class ChatEmojiCacheServer:
 
 if __name__ == "__main__":
     cli_args = parse_args()
+    if cli_args.dump_from and cli_args.dump_to:
+        dump(cli_args.dump_from, cli_args.dump_to)
     server = ChatEmojiCacheServer(cli_args.host, cli_args.port, cli_args,
         set_logging_level(cli_args.log_level, cli_args.log_name)
     )
