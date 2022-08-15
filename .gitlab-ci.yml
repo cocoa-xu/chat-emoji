@@ -3,9 +3,8 @@ before_script:
   - python --version
 
 test:
-  environment:
-    DEBIAN_FRONTEND: noninteractive
   script:
+    - export DEBIAN_FRONTEND=noninteractive
     - apt update && apt install -y --no-install-recommends pylint
     - pylint --disable=C0114,C0115,C0116 main.py
 
