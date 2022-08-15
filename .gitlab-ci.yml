@@ -3,7 +3,7 @@ before_script:
   - python --version
 
 test:
-  environemnt:
+  environment:
     DEBIAN_FRONTEND: noninteractive
   script:
     - apt update && apt install -y --no-install-recommends pylint
