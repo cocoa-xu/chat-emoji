@@ -6,5 +6,6 @@ test:
   script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt update && apt install -y --no-install-recommends pylint
+    - pip3 install -r requirements.txt
     - pylint --disable=C0114,C0115,C0116 main.py
 
