@@ -1,0 +1,13 @@
+[Unit]
+Description=YouTube Chat Emoji Cache Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/chat-emoji-server.py --cache-dir=/var/www/chat-emoji
+User=www-data
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
