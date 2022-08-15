@@ -1,11 +1,23 @@
 image: python:latest
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
 before_script:
-  - python --version
+  - python --version  # For debugging
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update && apt install -y --no-install-recommends pylint
 
 test:
   script:
-    - export DEBIAN_FRONTEND=noninteractive
-    - apt update && apt install -y --no-install-recommends pylint
     - pip3 install -r requirements.txt
     - pylint --disable=C0114,C0115,C0116 main.py
 
