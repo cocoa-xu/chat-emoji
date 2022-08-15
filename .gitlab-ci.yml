@@ -3,6 +3,9 @@ before_script:
   - python --version
 
 test:
+  environemnt:
+    DEBIAN_FRONTEND: noninteractive
   script:
+    - apt update && apt install -y --no-install-recommends pylint
     - pylint --disable=C0114,C0115,C0116 main.py
 
