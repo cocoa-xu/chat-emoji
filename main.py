@@ -96,7 +96,8 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write("""
         <!DOCTYPE html>
-        <html lang="en"><head>
+        <html lang="en">
+        <head>
         <meta charset="UTF-8">
         <title>Chat Emoji Caches</title>
         <style>
@@ -155,6 +156,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
                 padding: 0;
             }
         </style>
+        </head>
         <body>
             <section id="emojis">
         """.encode('utf-8'))
@@ -167,6 +169,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
                 self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe/hires/'.encode('utf-8'))
                 self.wfile.write(key_bin)
                 self.wfile.write('">'.encode('utf-8'))
+        self.wfile.write("</section></body></html>".encode('utf-8'))
 
     def key_to_cache_file(self, key):
         base64_key = base64.b64encode(key.encode('ascii')).decode('ascii')
