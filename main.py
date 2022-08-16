@@ -195,6 +195,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
             self.send_response(status_code)
             for name in headers:
                 self.send_header(name, headers[name])
+            self.send_header("Cache-Control", "max-age=604800")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(data)
