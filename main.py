@@ -177,7 +177,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         self.wfile.write("</section></body></html>".encode('utf-8'))
 
     def key_to_cache_file(self, key: str):
-        base64_key = base64.b64encode(key).decode('ascii')
+        base64_key = base64.b64encode(key.encode('utf-8')).decode('ascii')
         return f"{self.cache_dir}/{base64_key}.json"
 
     def ensure_cache_directory(self):
