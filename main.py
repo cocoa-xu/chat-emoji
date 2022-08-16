@@ -72,6 +72,68 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         self.logger = logger
         BaseHTTPRequestHandler.__init__(self, *args)
 
+    def handle_landing(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write("""
+        <!DOCTYPE html>
+        <html lang="en"><head>
+        <meta charset="UTF-8">
+        <title>Chat Emoji Caches</title>
+        <style>
+            #emojis {
+                line-height: 0;
+
+                -webkit-column-count: 12;
+                -webkit-column-gap:   1em;
+                -moz-column-count:    12;
+                -moz-column-gap:      1em;
+                column-count:         12;
+                column-gap:           1em;
+                -webkit-perspective:  1;
+                margin: auto;
+                width: 80%;
+            }
+
+            #emojis img {
+                display: block;
+                width: 100% !important;
+                height: auto !important;
+                padding-top: 1em;
+            }
+
+            @media (max-width: 800px) {
+                #photos {
+                    -moz-column-count:    12;
+                    -webkit-column-count: 12;
+                    column-count:         12;
+                }
+            }
+            @media (max-width: 400px) {
+                #photos {
+                    -moz-column-count:    6;
+                    -webkit-column-count: 6;
+                    column-count:         6;
+                }
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+        <body>
+            <section id="emojis">
+        """.encode('utf-8'))
+
+        files = self.cache_dir.glob('*.json')
+        for file in files:
+            self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe'.encode('utf-8'))
+            self.wfile.write(base64.b64decode(file.stem))
+            self.wfile.write('">'.encode('utf-8'))
+
+
     def key_to_cache_file(self, key):
         base64_key = base64.b64encode(key.encode('ascii')).decode('ascii')
         return f"{self.cache_dir}/{base64_key}.json"
@@ -126,13 +188,16 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
 
     # pylint: disable=invalid-name
     def do_GET(self):
-        status_code, headers, data = self.fetch_emoji(self.path)
-        self.send_response(status_code)
-        for name in headers:
-            self.send_header(name, headers[name])
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(data)
+        if self.path == '/':
+            self.handle_landing()
+        else:
+            status_code, headers, data = self.fetch_emoji(self.path)
+            self.send_response(status_code)
+            for name in headers:
+                self.send_header(name, headers[name])
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(data)
 
 
 # pylint: disable=too-few-public-methods
