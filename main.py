@@ -43,25 +43,29 @@ def set_logging_level(log_level_str: str, logger_name: str):
     return logging.getLogger(logger_name)
 
 
-def dump_single(file_path, to_path):
-    output_file_name = f"{file_path.stem}.png"
+def dump_single(file_path, to_path: Path):
+    output_file_name = f"{base64.b64decode(file_path.stem).decode('utf-8')}.png"[1:]
     if to_path.is_dir():
-        to_path = to_path / output_file_name
+        to_path = to_path.joinpath(output_file_name)
     output_file = to_path.resolve()
     with open(file_path.resolve(), 'r', encoding='utf-8') as cache_file_f:
         cache_file = json.load(cache_file_f)
         with open(output_file, "wb") as output_f:
-            output_f.write(base64.b64decode(cache_file['data']))
+            if len(cache_file['hires']) > 0:
+                data = cache_file['hires']
+            else:
+                data = cache_file['data']
+            output_f.write(base64.b64decode(data))
 
 
 def dump(from_path, to_path, blocking_map):
-    from_path = Path(from_path)
-    to_path = Path(to_path)
+    from_path = Path(from_path).resolve()
+    to_path = Path(to_path).resolve()
     if from_path.is_dir():
         files = from_path.glob('*.json')
         to_path.mkdir(parents=True, exist_ok=True)
         for file in files:
-            path = file.stem.decode('utf-8')
+            path = file.stem
             if blocking_map is None or path not in blocking_map:
                 dump_single(file, to_path)
     else:
@@ -69,16 +73,17 @@ def dump(from_path, to_path, blocking_map):
 
 
 def load_blocking_list(blocking_list_file):
-    file = Path(blocking_list_file)
-    if file.is_file():
-        with open(file.resolve(), 'r', encoding='utf-8') as file_handle:
-            blocking_map = {}
-            for line in file_handle:
-                line = line.strip()
-                if len(line) > 0:
-                    blocking_map[line] = True
-            if len(blocking_map) > 0:
-                return blocking_map
+    if blocking_list_file is not None:
+        file = Path(blocking_list_file)
+        if file.is_file():
+            with open(file.resolve(), 'r', encoding='utf-8') as file_handle:
+                blocking_map = {}
+                for line in file_handle:
+                    line = line.strip()
+                    if len(line) > 0:
+                        blocking_map[line] = True
+                if len(blocking_map) > 0:
+                    return blocking_map
     return None
 
 
@@ -166,21 +171,28 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
             key_bin = base64.b64decode(file.stem)
             key = key_bin.decode('utf-8')
             if self.blocking_map is None or key not in self.blocking_map:
-                self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe/hires/'.encode('utf-8'))
+                self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe/hires'.encode('utf-8'))
                 self.wfile.write(key_bin)
                 self.wfile.write('">'.encode('utf-8'))
         self.wfile.write("</section></body></html>".encode('utf-8'))
 
-    def key_to_cache_file(self, key):
-        base64_key = base64.b64encode(key.encode('ascii')).decode('ascii')
+    def key_to_cache_file(self, key: str):
+        base64_key = base64.b64encode(key).decode('ascii')
         return f"{self.cache_dir}/{base64_key}.json"
 
     def ensure_cache_directory(self):
         if not self.cache_dir.exists():
             self.logger.info("creating cache directory at %s", self.cache_dir.resolve())
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def ensure_hires_directory(self):
+        hires_dir = self.cache_dir / 'hires'
+        if not hires_dir.exists():
+            self.logger.info("creating hires directory at %s", self.hires_dir.resolve())
+            hires_dir.mkdir(parents=True, exist_ok=True)
+        return hires_dir
 
-    def cache_emoji(self, key, headers, data):
+    def cache_emoji(self, key: str, headers, data):
         if self.blocking_map is None or key not in self.blocking_map:
             cache_file = self.key_to_cache_file(key)
             url = f"{self.chat_host}{key}".replace("w48", "w1024").replace("h48", "h1024")
@@ -188,6 +200,11 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
             hires = ""
             if resp.status_code == 200:
                 hires = base64.b64encode(resp.content).decode('ascii')
+                hires_dir = self.ensure_hires_directory()
+                hires_file = hires_dir / f"{key}.png"
+                with open(hires_file, "wb") as hires_file_f:
+                    hires_file_f.write(resp.content)
+
             base64_data = base64.b64encode(data).decode('ascii')
             cache = {
                 "cache_time": time.time(),
@@ -204,8 +221,8 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
 
     def fetch_emoji_local(self, key):
         send_hires = False
-        if key.startswith("/hires/"):
-            key = key[len("/hires/"):]
+        if key.startswith("/hires"):
+            key = key[len("/hires"):]
             send_hires = True
         cache_file = self.key_to_cache_file(key)
         if f_exists(cache_file):
@@ -216,7 +233,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
                 return True, cache["headers"], cache["data"], cache["cache_time"]
         return False, None, None, None
 
-    def fetch_emoji(self, key):
+    def fetch_emoji(self, key: str):
         cache_hit, header, data, cache_time = self.fetch_emoji_local(key)
         if cache_hit:
             date_time = datetime.fromtimestamp(cache_time)
