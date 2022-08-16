@@ -201,7 +201,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
             if resp.status_code == 200:
                 hires = base64.b64encode(resp.content).decode('ascii')
                 hires_dir = self.ensure_hires_directory()
-                hires_file = hires_dir / f"{key}.png"
+                hires_file = hires_dir / f"{key[1:]}.png"
                 with open(hires_file, "wb") as hires_file_f:
                     hires_file_f.write(resp.content)
 
