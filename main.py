@@ -171,7 +171,7 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         for file in files:
             key = base64.b64decode(file.stem).decode('utf-8')
             if self.blocking_map is None or key not in self.blocking_map:
-                self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe/hires'.encode('utf-8'))
+                self.wfile.write('<img src="/hires'.encode('utf-8'))
                 key = key.split("=", maxsplit=2)[0]
                 self.wfile.write(f"{key}.png\">".encode('utf-8'))
         self.wfile.write("</section></body></html>".encode('utf-8'))
