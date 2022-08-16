@@ -121,18 +121,32 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
                 padding-top: 1em;
             }
 
-            @media (max-width: 800px) {
-                #photos {
+            @media (max-width: 1536px) {
+                #emojis {
                     -moz-column-count:    12;
                     -webkit-column-count: 12;
                     column-count:         12;
                 }
             }
-            @media (max-width: 400px) {
-                #photos {
+            @media (max-width: 1280px) {
+                #emojis {
+                    -moz-column-count:    9;
+                    -webkit-column-count: 9;
+                    column-count:         9;
+                }
+            }
+            @media (max-width: 800px) {
+                #emojis {
                     -moz-column-count:    6;
                     -webkit-column-count: 6;
                     column-count:         6;
+                }
+            }
+            @media (max-width: 400px) {
+                #emojis {
+                    -moz-column-count:    3;
+                    -webkit-column-count: 3;
+                    column-count:         3;
                 }
             }
 
@@ -147,10 +161,11 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
 
         files = self.cache_dir.glob('*.json')
         for file in files:
-            key = base64.b64decode(file.stem).decode('utf-8')
+            key_bin = base64.b64decode(file.stem)
+            key = key_bin.decode('utf-8')
             if self.blocking_map is None or key not in self.blocking_map:
-                self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe'.encode('utf-8'))
-                self.wfile.write(base64.b64decode(file.stem))
+                self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe/hires/'.encode('utf-8'))
+                self.wfile.write(key_bin)
                 self.wfile.write('">'.encode('utf-8'))
 
     def key_to_cache_file(self, key):
@@ -165,13 +180,19 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
     def cache_emoji(self, key, headers, data):
         if self.blocking_map is None or key not in self.blocking_map:
             cache_file = self.key_to_cache_file(key)
+            url = f"{self.chat_host}{key}".replace("w48", "w1024").replace("h48", "h1024")
+            resp = requests.get(url, verify=True)
+            hires = ""
+            if resp.status_code == 200:
+                hires = base64.b64encode(resp.content).decode('ascii')
             base64_data = base64.b64encode(data).decode('ascii')
             cache = {
                 "cache_time": time.time(),
                 "headers": {
                     "Content-type": headers["Content-type"]
                 },
-                "data": base64_data
+                "data": base64_data,
+                "hires": hires
             }
             json_encoded = json.dumps(cache)
             self.ensure_cache_directory()
@@ -179,10 +200,16 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
                 cache_file_f.write(json_encoded)
 
     def fetch_emoji_local(self, key):
+        send_hires = False
+        if key.startswith("/hires/"):
+            key = key[len("/hires/"):]
+            send_hires = True
         cache_file = self.key_to_cache_file(key)
         if f_exists(cache_file):
             with open(cache_file, "r", encoding='utf-8') as cache_file_f:
                 cache = json.load(cache_file_f)
+                if send_hires and len(cache["hires"]) > 0:
+                    return True, cache["headers"], cache["hires"], cache["cache_time"]
                 return True, cache["headers"], cache["data"], cache["cache_time"]
         return False, None, None, None
 
