@@ -1,12 +1,14 @@
 import argparse
 import base64
 from datetime import datetime
+from genericpath import isfile
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import os
 from os.path import exists as f_exists
 import logging
 from pathlib import Path
+from pydoc import doc
 import time
 import requests
 
@@ -16,6 +18,7 @@ def parse_args():
     cwd = cwd.resolve()
     parser = argparse.ArgumentParser(description='YouTube Chat Emoji Cache Server.')
     parser.add_argument('--cache-dir', type=str, default=cwd, help='Cache directory')
+    parser.add_argument('--blocking-list', type=str, default=None, help='Blocking paths')
     parser.add_argument('--dump-from', type=str, default=None, help='Dump cached file')
     parser.add_argument('--dump-to', type=str, default=None, help='Dump cached file to')
     parser.add_argument('--chat-host', type=str, default='https://yt3.ggpht.com',
@@ -53,23 +56,40 @@ def dump_single(file_path, to_path):
             output_f.write(base64.b64decode(cache_file['data']))
 
 
-def dump(from_path, to_path):
+def dump(from_path, to_path, blocking_map):
     from_path = Path(from_path)
     to_path = Path(to_path)
     if from_path.is_dir():
         files = from_path.glob('*.json')
         to_path.mkdir(parents=True, exist_ok=True)
         for file in files:
-            dump_single(file, to_path)
+            path = file.stem.decode('utf-8')
+            if blocking_map is None or path not in blocking_map:
+                dump_single(file, to_path)
     else:
         dump_single(from_path, to_path)
 
 
+def load_blocking_list(blocking_list_file):
+    file = Path(blocking_list_file)
+    if file.is_file():
+        with open(file.resolve(), 'r', encoding='utf-8') as file_handle:
+            blocking_map = {}
+            for line in file_handle:
+                line = line.strip()
+                if len(line) > 0:
+                    blocking_map[line] = True
+            if len(blocking_map) > 0:
+                return blocking_map
+    return None
+
+
 class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
-    def __init__(self, cache_dir, chat_host, logger, *args):
+    def __init__(self, cache_dir, chat_host, logger, blocking_map, *args):
         self.cache_dir = cache_dir
         self.chat_host = chat_host
         self.logger = logger
+        self.blocking_map = blocking_map
         BaseHTTPRequestHandler.__init__(self, *args)
 
     def handle_landing(self):
@@ -144,19 +164,20 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def cache_emoji(self, key, headers, data):
-        cache_file = self.key_to_cache_file(key)
-        base64_data = base64.b64encode(data).decode('ascii')
-        cache = {
-            "cache_time": time.time(),
-            "headers": {
-                "Content-type": headers["Content-type"]
-            },
-            "data": base64_data
-        }
-        json_encoded = json.dumps(cache)
-        self.ensure_cache_directory()
-        with open(cache_file, "w", encoding='utf-8') as cache_file_f:
-            cache_file_f.write(json_encoded)
+        if self.blocking_map is None or key not in self.blocking_map:
+            cache_file = self.key_to_cache_file(key)
+            base64_data = base64.b64encode(data).decode('ascii')
+            cache = {
+                "cache_time": time.time(),
+                "headers": {
+                    "Content-type": headers["Content-type"]
+                },
+                "data": base64_data
+            }
+            json_encoded = json.dumps(cache)
+            self.ensure_cache_directory()
+            with open(cache_file, "w", encoding='utf-8') as cache_file_f:
+                cache_file_f.write(json_encoded)
 
     def fetch_emoji_local(self, key):
         cache_file = self.key_to_cache_file(key)
@@ -178,7 +199,10 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         url = f"{self.chat_host}{self.path}"
         resp = requests.get(url, verify=True)
 
-        self.logger.info("cache miss, fetch_url=%s, status_code=%d", url, resp.status_code)
+        if self.blocking_map is not None and key in self.blocking_map:
+            self.logger.info("cache ignore, fetch_url=%s, status_code=%d", url, resp.status_code)
+        else:
+            self.logger.info("cache miss, fetch_url=%s, status_code=%d", url, resp.status_code)
         if resp.status_code == 200:
             self.cache_emoji(key, resp.headers, resp.content)
         headers = {
@@ -221,10 +245,12 @@ class ChatEmojiCacheServer:
             pass
         web_server.server_close()
 
+
 if __name__ == "__main__":
     cli_args = parse_args()
+    blocking_map = load_blocking_list(cli_args.blocking_list)
     if cli_args.dump_from and cli_args.dump_to:
-        dump(cli_args.dump_from, cli_args.dump_to)
+        dump(cli_args.dump_from, cli_args.dump_to, blocking_map)
     server = ChatEmojiCacheServer(cli_args.host, cli_args.port, cli_args,
         set_logging_level(cli_args.log_level, cli_args.log_name)
     )

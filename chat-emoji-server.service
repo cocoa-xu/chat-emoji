@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /usr/local/bin/chat-emoji-server.py --cache-dir=/var/www/chat-emoji
+ExecStart=/usr/bin/python3 /usr/local/bin/chat-emoji-server.py --cache-dir=/var/www/chat-emoji --blocking-list=/etc/chat-emoji/blocking-list.txt
 User=www-data
 Restart=on-failure
 

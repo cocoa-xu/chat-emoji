@@ -6,6 +6,8 @@ Cache YouTube chat emojis.
 pip3 install -r requirements.txt
 sudo cp -a main.py /usr/local/bin/chat-emoji-server.py
 sudo chmod +x /usr/local/bin/chat-emoji-server.py
+sudo cp -a blocking-list.txt /etc/chat-emoji/blocking-list.txt
+sudo chmod a+r /etc/chat-emoji/blocking-list.txt
 
 # edit nginx conf
 cp -f nginx-example.conf chat-emoji.example.com
