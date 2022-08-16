@@ -195,7 +195,10 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
     def cache_emoji(self, key: str, headers, data):
         if self.blocking_map is None or key not in self.blocking_map:
             cache_file = self.key_to_cache_file(key)
-            url = f"{self.chat_host}{key}".replace("w48", "w1024").replace("h48", "h1024")
+            url = f"{self.chat_host}{key}"
+            url = url.replace("w48", "w1024")\
+                     .replace("h48", "h1024")\
+                     .replace("s64", "s512")
             resp = requests.get(url, verify=True)
             hires = ""
             if resp.status_code == 200:
