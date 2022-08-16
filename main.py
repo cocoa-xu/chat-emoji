@@ -7,7 +7,6 @@ import os
 from os.path import exists as f_exists
 import logging
 from pathlib import Path
-from pydoc import doc
 import time
 import requests
 
@@ -149,9 +148,10 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         files = self.cache_dir.glob('*.json')
         for file in files:
             self.wfile.write('<img src="https://chat-emoji.uwucocoa.moe'.encode('utf-8'))
-            self.wfile.write(base64.b64decode(file.stem))
-            self.wfile.write('">'.encode('utf-8'))
-
+            key = base64.b64decode(file.stem).decode('utf-8')
+            if self.blocking_map is None or key not in self.blocking_map:
+                self.wfile.write(base64.b64decode(file.stem))
+                self.wfile.write('">'.encode('utf-8'))
 
     def key_to_cache_file(self, key):
         base64_key = base64.b64encode(key.encode('ascii')).decode('ascii')
