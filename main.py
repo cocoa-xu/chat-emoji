@@ -1,7 +1,6 @@
 import argparse
 import base64
 from datetime import datetime
-from genericpath import isfile
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import os
@@ -227,16 +226,18 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
 
 # pylint: disable=too-few-public-methods
 class ChatEmojiCacheServer:
-    def __init__(self, host, port, user_args, logger):
+    def __init__(self, host, port, blocking_map, user_args, logger):
         self.logger = logger
         self.cache_dir = Path(user_args.cache_dir)
         self.chat_host = user_args.chat_host
         self.host = host
         self.port = port
+        self.blocking_map = blocking_map
 
     def serve_forever(self):
         def handler(*args):
-            ChatEmojiCacheHandler(self.cache_dir, self.chat_host, self.logger, *args)
+            ChatEmojiCacheHandler(self.cache_dir, self.chat_host, self.logger,
+                self.blocking_map, *args)
         web_server = HTTPServer((self.host, self.port), handler)
         self.logger.info("server started at http://%s:%s", self.host, self.port)
         try:
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     blocking_map = load_blocking_list(cli_args.blocking_list)
     if cli_args.dump_from and cli_args.dump_to:
         dump(cli_args.dump_from, cli_args.dump_to, blocking_map)
-    server = ChatEmojiCacheServer(cli_args.host, cli_args.port, cli_args,
-        set_logging_level(cli_args.log_level, cli_args.log_name)
+    server = ChatEmojiCacheServer(cli_args.host, cli_args.port, blocking_map,
+        cli_args, set_logging_level(cli_args.log_level, cli_args.log_name)
     )
     server.serve_forever()

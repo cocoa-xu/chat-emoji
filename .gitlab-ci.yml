@@ -18,5 +18,5 @@ test:
   script:
     - pip3 install -r requirements.txt
     - pip3 install pylint
-    - pylint --disable=C0114,C0115,C0116 main.py
+    - pylint --disable=C0114,C0115,C0116,W0621,R0913 main.py
 
