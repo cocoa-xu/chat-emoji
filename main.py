@@ -44,7 +44,8 @@ def set_logging_level(log_level_str: str, logger_name: str):
 
 
 def dump_single(file_path, to_path: Path):
-    output_file_name = f"{base64.b64decode(file_path.stem).decode('utf-8')}.png"[1:]
+    output_file_name = f"{base64.b64decode(file_path.stem).decode('utf-8')}"[1:]
+    output_file_name = output_file_name.split("=", maxsplit=2)[0] + ".png"
     if to_path.is_dir():
         to_path = to_path.joinpath(output_file_name)
     output_file = to_path.resolve()
