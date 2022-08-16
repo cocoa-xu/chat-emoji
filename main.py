@@ -184,11 +184,11 @@ class ChatEmojiCacheHandler(BaseHTTPRequestHandler):
         if not self.cache_dir.exists():
             self.logger.info("creating cache directory at %s", self.cache_dir.resolve())
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def ensure_hires_directory(self):
         hires_dir = self.cache_dir / 'hires'
         if not hires_dir.exists():
-            self.logger.info("creating hires directory at %s", self.hires_dir.resolve())
+            self.logger.info("creating hires directory at %s", hires_dir.resolve())
             hires_dir.mkdir(parents=True, exist_ok=True)
         return hires_dir
 
